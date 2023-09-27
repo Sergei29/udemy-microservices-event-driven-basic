@@ -6,6 +6,7 @@ const EVENT_TYPE = Object.freeze({
   POST_CREATED: "PostCreated",
   COMMENT_CREATED: "CommentCreated",
   COMMENT_MODERATED: "CommentModerated",
+  COMMENT_UPDATED: "CommentUpdated",
 });
 const PORT = 4005;
 const app = express();

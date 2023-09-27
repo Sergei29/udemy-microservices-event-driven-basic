@@ -20,6 +20,7 @@ const writeDb = async (data) => {
   await fs.writeFile(filename, JSON.stringify(data), { encoding: "utf-8" });
   return await readDb();
 };
+
 /**
  * @param {string} type
  * @param {{id: string, content: string, postId: string }} data
@@ -39,6 +40,7 @@ const EVENT_TYPE = Object.freeze({
   POST_CREATED: "PostCreated",
   COMMENT_CREATED: "CommentCreated",
   COMMENT_MODERATED: "CommentModerated",
+  COMMENT_UPDATED: "CommentUpdated",
 });
 
 module.exports = { readDb, writeDb, postEvent, EVENT_TYPE };

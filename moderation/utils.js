@@ -21,6 +21,21 @@ const writeDb = async (data) => {
   return await readDb();
 };
 
+/**
+ * @param {string} type
+ * @param {{id: string, content: string, postId: string }} data
+ */
+const postEvent = async (type, data) => {
+  try {
+    await axios.post("http://localhost:4005/events", {
+      type,
+      data,
+    });
+  } catch (error) {
+    console.log(`"${type}" event error: `, error);
+  }
+};
+
 const EVENT_TYPE = Object.freeze({
   POST_CREATED: "PostCreated",
   COMMENT_CREATED: "CommentCreated",
@@ -28,4 +43,4 @@ const EVENT_TYPE = Object.freeze({
   COMMENT_UPDATED: "CommentUpdated",
 });
 
-module.exports = { readDb, writeDb, EVENT_TYPE };
+module.exports = { readDb, writeDb, postEvent, EVENT_TYPE };

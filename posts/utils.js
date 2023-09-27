@@ -40,6 +40,7 @@ const EVENT_TYPE = Object.freeze({
   POST_CREATED: "PostCreated",
   COMMENT_CREATED: "CommentCreated",
   COMMENT_MODERATED: "CommentModerated",
+  COMMENT_UPDATED: "CommentUpdated",
 });
 
 module.exports = { readDb, writeDb, postEvent, EVENT_TYPE };
