@@ -31,15 +31,35 @@ app.post("/events", async (req, res) => {
     }
 
     case EVENT_TYPE.COMMENT_CREATED: {
-      const { id, content, postId } = event.data;
+      const { id, content, status, postId } = event.data;
       if (typeof postId !== "string") break;
       const postFound = posts[postId];
       if (!postFound) break;
 
       posts[postId] = {
         ...postFound,
-        comments: [...postFound.comments, { id, content }],
+        comments: [...postFound.comments, { id, content, status }],
       };
+      await writeDb(posts);
+      break;
+    }
+
+    case EVENT_TYPE.COMMENT_UPDATED: {
+      const { id, content, status, postId } = event.data;
+      if (typeof postId !== "string") break;
+      const postFound = posts[postId];
+      if (!postFound) break;
+
+      posts[postId] = {
+        ...postFound,
+        comments: postFound.comments.map((current) => {
+          if (current.id === id) {
+            return { ...current, content, status };
+          }
+          return current;
+        }),
+      };
+
       await writeDb(posts);
       break;
     }

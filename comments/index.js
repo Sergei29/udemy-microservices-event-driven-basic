@@ -1,7 +1,13 @@
 const express = require("express");
 const cors = require("cors");
-const { randomBytes } = require("crypto");
-const { readDb, writeDb, postEvent, EVENT_TYPE } = require("./utils");
+const {
+  readDb,
+  writeDb,
+  postEvent,
+  createNewComment,
+  updateComment,
+  EVENT_TYPE,
+} = require("./utils");
 
 const PORT = 4001;
 const app = express();
@@ -21,22 +27,28 @@ app.post("/posts/:id/comments", async (req, res) => {
    */
   const commentInfo = req.body;
   const postId = req.params.id;
-  const id = randomBytes(4).toString("hex");
-  const newComment = { id, ...commentInfo };
+
+  const newComment = createNewComment({ ...commentInfo, postId });
 
   const commentsByPostId = await readDb();
   const currentPostComments = commentsByPostId[postId] || [];
   commentsByPostId[postId] = [...currentPostComments, newComment];
 
   const newCommentsByPostId = await writeDb(commentsByPostId);
-  await postEvent(EVENT_TYPE.COMMENT_CREATED, { ...newComment, postId });
+  await postEvent(EVENT_TYPE.COMMENT_CREATED, newComment);
 
   res.status(201).json(newCommentsByPostId[postId]);
 });
 
 app.post("/events", async (req, res) => {
   const event = req.body;
-  console.log("Event: ", event);
+
+  if (event.type === EVENT_TYPE.COMMENT_MODERATED) {
+    const updated = await updateComment(event.data);
+    if (updated) {
+      await postEvent(EVENT_TYPE.COMMENT_UPDATED, updated);
+    }
+  }
 
   res.status(204).end();
 });

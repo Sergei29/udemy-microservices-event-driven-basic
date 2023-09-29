@@ -19,8 +19,10 @@ app.post("/posts", async (req, res) => {
   const postInfo = req.body;
   const id = randomBytes(4).toString("hex");
   const newPost = { id, ...postInfo };
+
   const posts = await readDb();
   posts[id] = newPost;
+
   await writeDb(posts);
   await postEvent(EVENT_TYPE.POST_CREATED, newPost);
 

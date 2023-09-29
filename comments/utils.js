@@ -1,9 +1,19 @@
 const fs = require("fs/promises");
 const path = require("path");
 const axios = require("axios");
+const { randomBytes } = require("crypto");
+
+const SERVICE = Object.freeze({
+  CLIENT: "http://localhost:3000",
+  COMMENTS: "http://localhost:4001",
+  EVENT_BUS: "http://localhost:4005",
+  POSTS: "http://localhost:4000",
+  QUERY: "http://localhost:4002",
+  MODERATION: "http://localhost:4003",
+});
 
 /**
- * @returns {Promise<{ [postId: string]: { id: string; content: string}[] }>}
+ * @returns {Promise<{ [postId: string]: { id: string; content: string; status: string}[] }>}
  */
 const readDb = async () => {
   const filename = path.join(process.cwd(), "db.json");
@@ -12,7 +22,7 @@ const readDb = async () => {
 };
 
 /**
- * @param {{ [postId: string]: { id: string; content: string}[] }} data
+ * @param {{ [postId: string]: { id: string; content: string; status: string}[] }} data
  * @returns {Promise<{ [postId: string]: { id: string; content: string}[] }>}
  */
 const writeDb = async (data) => {
@@ -23,11 +33,11 @@ const writeDb = async (data) => {
 
 /**
  * @param {string} type
- * @param {{id: string, content: string, postId: string }} data
+ * @param {{id: string, content: string, status: string; postId: string }} data
  */
 const postEvent = async (type, data) => {
   try {
-    await axios.post("http://localhost:4005/events", {
+    await axios.post(`${SERVICE.EVENT_BUS}/events`, {
       type,
       data,
     });
@@ -43,4 +53,63 @@ const EVENT_TYPE = Object.freeze({
   COMMENT_UPDATED: "CommentUpdated",
 });
 
-module.exports = { readDb, writeDb, postEvent, EVENT_TYPE };
+/**
+ * @param {{ content: string; postId: string }} initialData
+ * @returns {{id: string; content: string; status: string; postId: string }}
+ */
+const createNewComment = (initialData) => ({
+  id: randomBytes(4).toString("hex"),
+  status: "pending",
+  ...initialData,
+});
+
+/**
+ * @param {{
+ *    id: string; content: string; status: string; postId: string
+ * }} comment
+ * @returns {Promise<{
+ *    id: string; content: string; status: string; postId: string
+ * }|null>}
+ */
+const updateComment = async (comment) => {
+  try {
+    const comments = await readDb();
+    if (!comments[comment.postId]) {
+      throw new Error("Not found comments list");
+    }
+
+    const foundComment = comments[comment.postId].find(
+      (current) => current.id === comment.id,
+    );
+
+    if (!foundComment) {
+      throw new Error("Not found the comment");
+    }
+
+    const newComment = { ...foundComment, ...comment };
+    const newPostComments = comments[comment.postId].map((current) => {
+      if (current.id === newComment.id) {
+        return newComment;
+      }
+      return current;
+    });
+
+    comments[comment.postId] = newPostComments;
+    await writeDb(comments);
+
+    return newComment;
+  } catch (error) {
+    console.log("uodate comment error: ", error);
+    return null;
+  }
+};
+
+module.exports = {
+  readDb,
+  writeDb,
+  postEvent,
+  createNewComment,
+  updateComment,
+  EVENT_TYPE,
+  SERVICE,
+};
