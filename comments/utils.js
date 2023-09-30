@@ -1,7 +1,7 @@
-const fs = require("fs/promises");
-const path = require("path");
 const axios = require("axios");
 const { randomBytes } = require("crypto");
+
+let DB = {};
 
 const SERVICE = Object.freeze({
   CLIENT: "http://localhost:3000",
@@ -12,23 +12,13 @@ const SERVICE = Object.freeze({
   MODERATION: "http://localhost:4003",
 });
 
-/**
- * @returns {Promise<{ [postId: string]: { id: string; content: string; status: string}[] }>}
- */
-const readDb = async () => {
-  const filename = path.join(process.cwd(), "db.json");
-  const dataJson = await fs.readFile(filename, { encoding: "utf-8" });
-  return JSON.parse(dataJson);
+const readDb = () => {
+  return DB;
 };
 
-/**
- * @param {{ [postId: string]: { id: string; content: string; status: string}[] }} data
- * @returns {Promise<{ [postId: string]: { id: string; content: string}[] }>}
- */
-const writeDb = async (data) => {
-  const filename = path.join(process.cwd(), "db.json");
-  await fs.writeFile(filename, JSON.stringify(data), { encoding: "utf-8" });
-  return await readDb();
+const writeDb = (eventList) => {
+  DB = { ...eventList };
+  return readDb();
 };
 
 /**
@@ -37,10 +27,7 @@ const writeDb = async (data) => {
  */
 const postEvent = async (type, data) => {
   try {
-    await axios.post(`${SERVICE.EVENT_BUS}/events`, {
-      type,
-      data,
-    });
+    await axios.post(`${SERVICE.EVENT_BUS}/events`, { type, data });
   } catch (error) {
     console.log(`"${type}" event error: `, error);
   }
@@ -67,13 +54,13 @@ const createNewComment = (initialData) => ({
  * @param {{
  *    id: string; content: string; status: string; postId: string
  * }} comment
- * @returns {Promise<{
+ * @returns {{
  *    id: string; content: string; status: string; postId: string
- * }|null>}
+ * }|null}
  */
-const updateComment = async (comment) => {
+const updateComment = (comment) => {
   try {
-    const comments = await readDb();
+    const comments = readDb();
     if (!comments[comment.postId]) {
       throw new Error("Not found comments list");
     }
@@ -95,7 +82,7 @@ const updateComment = async (comment) => {
     });
 
     comments[comment.postId] = newPostComments;
-    await writeDb(comments);
+    writeDb(comments);
 
     return newComment;
   } catch (error) {

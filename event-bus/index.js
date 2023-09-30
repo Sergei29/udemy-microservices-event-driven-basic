@@ -2,15 +2,23 @@ const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 
-const { SERVICE } = require("./utils");
+const { SERVICE, saveEvent, readDb } = require("./utils");
 
 const PORT = 4005;
 const app = express();
 
 app.use(cors(), express.json(), express.urlencoded({ extended: false }));
 
+app.get("/events", async (req, res) => {
+  const eventsList = readDb();
+
+  res.status(200).json(eventsList);
+});
+
 app.post("/events", async (req, res) => {
   const event = req.body;
+
+  saveEvent(event);
 
   axios.post(`${SERVICE.POSTS}/events`, event).catch((error) => {
     console.error("Post to 4000/events error: ", error.toString());

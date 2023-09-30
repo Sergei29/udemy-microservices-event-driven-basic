@@ -1,5 +1,4 @@
-const fs = require("fs/promises");
-const path = require("path");
+let DB = {};
 
 const SERVICE = Object.freeze({
   CLIENT: "http://localhost:3000",
@@ -17,24 +16,68 @@ const EVENT_TYPE = Object.freeze({
   COMMENT_UPDATED: "CommentUpdated",
 });
 
-/**
- *
- * @returns {Promise<{[postId:string]:{id: string; title: string; comments: {id: string; content: string; status: string;}[];}}>}
- */
-const readDb = async () => {
-  const filename = path.join(process.cwd(), "db.json");
-  const dataJson = await fs.readFile(filename, { encoding: "utf-8" });
-  return JSON.parse(dataJson);
+const readDb = () => {
+  return DB;
+};
+
+const writeDb = (data) => {
+  DB = { ...data };
+  return readDb();
 };
 
 /**
- * @param {{[postId:string]:{id: string; title: string; comments: {id: string; content: string; status: string;}[];}}} data
- * @returns {Promise<{[postId:string]:{id: string; title: string; comments: {id: string; content: string; status: string;}[];}}>}
+ * @param { {type: string, data:Record<string, any> }} event
  */
-const writeDb = async (data) => {
-  const filename = path.join(process.cwd(), "db.json");
-  await fs.writeFile(filename, JSON.stringify(data), { encoding: "utf-8" });
-  return await readDb();
+const handleEvent = ({ type, data }) => {
+  console.log("handleEvent() :>> ", { type, data });
+  switch (type) {
+    case EVENT_TYPE.POST_CREATED: {
+      const posts = readDb();
+      const { id, title } = data;
+      posts[id] = { id, title, comments: [] };
+
+      return writeDb(posts);
+    }
+
+    case EVENT_TYPE.COMMENT_CREATED: {
+      const posts = readDb();
+      const { id, content, status, postId } = data;
+      if (typeof postId !== "string") break;
+      const postFound = posts[postId];
+      if (!postFound) break;
+
+      posts[postId] = {
+        ...postFound,
+        comments: [...postFound.comments, { id, content, status }],
+      };
+
+      return writeDb(posts);
+    }
+
+    case EVENT_TYPE.COMMENT_UPDATED: {
+      const posts = readDb();
+      const { id, content, status, postId } = data;
+      if (typeof postId !== "string") break;
+      const postFound = posts[postId];
+      if (!postFound) break;
+
+      posts[postId] = {
+        ...postFound,
+        comments: postFound.comments.map((current) => {
+          if (current.id === id) {
+            return { ...current, content, status };
+          }
+          return current;
+        }),
+      };
+
+      return writeDb(posts);
+    }
+
+    default:
+      console.error(`Event type "${type}" unknown.`);
+      return;
+  }
 };
 
-module.exports = { readDb, writeDb, EVENT_TYPE, SERVICE };
+module.exports = { readDb, writeDb, EVENT_TYPE, SERVICE, handleEvent };

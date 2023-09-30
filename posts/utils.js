@@ -1,6 +1,6 @@
-const fs = require("fs/promises");
-const path = require("path");
 const axios = require("axios");
+
+let DB = {};
 
 const SERVICE = Object.freeze({
   CLIENT: "http://localhost:3000",
@@ -18,23 +18,13 @@ const EVENT_TYPE = Object.freeze({
   COMMENT_UPDATED: "CommentUpdated",
 });
 
-/**
- * @returns {Promise<{[postId:string]:{id:string; title: string}}>}
- */
-const readDb = async () => {
-  const filename = path.join(process.cwd(), "db.json");
-  const dataJson = await fs.readFile(filename, { encoding: "utf-8" });
-  return JSON.parse(dataJson);
+const readDb = () => {
+  return DB;
 };
 
-/**
- * @param {{[postId:string]:{id:string; title: string}}} data
- * @returns {Promise<{[postId:string]:{id:string; title: string}}>}
- */
 const writeDb = async (data) => {
-  const filename = path.join(process.cwd(), "db.json");
-  await fs.writeFile(filename, JSON.stringify(data), { encoding: "utf-8" });
-  return await readDb();
+  DB = { ...data };
+  return readDb();
 };
 
 /**

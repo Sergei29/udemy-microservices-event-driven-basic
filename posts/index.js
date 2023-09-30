@@ -10,7 +10,7 @@ const app = express();
 app.use(cors(), express.json(), express.urlencoded({ extended: false }));
 
 app.get("/posts", async (req, res) => {
-  const posts = await readDb();
+  const posts = readDb();
 
   res.status(200).json(posts);
 });
@@ -20,10 +20,10 @@ app.post("/posts", async (req, res) => {
   const id = randomBytes(4).toString("hex");
   const newPost = { id, ...postInfo };
 
-  const posts = await readDb();
+  const posts = readDb();
   posts[id] = newPost;
 
-  await writeDb(posts);
+  writeDb(posts);
   await postEvent(EVENT_TYPE.POST_CREATED, newPost);
 
   res.status(201).json(newPost);
